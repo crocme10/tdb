@@ -2,14 +2,15 @@ use chrono::Utc;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use sqlx::PgExecutor;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 #[tokio::main]
 async fn main() {
     let conn_str = std::env::var("DATABASE_URL").expect("database url");
     let pool = connect_with_conn_str(&conn_str, 4000).await;
-    let mut conn = pool.acquire().await.expect("acquire connection");
+    let conn = pool.acquire().await.expect("acquire connection");
     run(conn).await;
 
     println!("connected");
@@ -18,14 +19,14 @@ async fn main() {
 async fn run<T>(exec: T)
 where
     for<'e> &'e mut T: PgExecutor<'e>,
-    T: Send + Sync,
+    T: Send + Sync + 'static,
 {
     let state = Arc::new(Mutex::new(State { exec }));
     let mut people = HashMap::new();
     people.insert("Bob", "bob@foo.com");
     people.insert("Alice", "alice@acme.inc");
     let threads: Vec<_> = people
-        .iter()
+        .into_iter()
         .map(|(key, value)| {
             let state = state.clone();
             tokio::spawn(async move {
@@ -40,12 +41,13 @@ where
 
     println!("done");
 }
-pub async fn subscriptions<T>(username: String, email: String,
-                              state: Arc<Mutex<State<T>>>)
+
+pub async fn subscriptions<T>(username: String, email: String, state: Arc<Mutex<State<T>>>)
 where
     for<'e> &'e mut T: PgExecutor<'e>,
     T: Send + Sync,
 {
+    let mut guard = state.lock().await;
     let _ = sqlx::query!(
         r#"INSERT INTO subscriptions (id, email, username, subscribed_at) VALUES ($1, $2, $3, $4)"#,
         Uuid::new_v4(),
@@ -53,7 +55,7 @@ where
         username,
         Utc::now()
     )
-    .execute(&mut state.lock().unwrap().exec)
+    .execute(&mut guard.exec)
     .await
     .expect("insert into subscriptions");
 }
@@ -69,5 +71,3 @@ pub async fn connect_with_conn_str(conn_str: &str, timeout: u64) -> PgPool {
         .await
         .expect("Postgres Pool")
 }
-
-
