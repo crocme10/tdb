@@ -82,6 +82,7 @@ mod tests {
         let pool = connect_with_conn_str(&conn_str, 4000).await;
         let tx = pool.begin().await.expect("begin transaction");
         run(tx).await;
-        println!("done");
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM subscriptions").fetch_one(&mut tx).await.expect("count");
+        assert_eq!(count, 2);
     }
 }
