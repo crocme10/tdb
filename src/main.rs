@@ -71,3 +71,17 @@ pub async fn connect_with_conn_str(conn_str: &str, timeout: u64) -> PgPool {
         .await
         .expect("Postgres Pool")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test1() {
+        let conn_str = std::env::var("DATABASE_URL").expect("database url");
+        let pool = connect_with_conn_str(&conn_str, 4000).await;
+        let tx = pool.begin().await.expect("begin transaction");
+        run(tx).await;
+        println!("done");
+    }
+}
