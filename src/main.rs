@@ -1,6 +1,6 @@
 use chrono::Utc;
 use sqlx::postgres::{PgPool, PgPoolOptions};
-use sqlx::Executor;
+use sqlx::PgExecutor;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -18,7 +18,7 @@ async fn main() {
 
 async fn run<'c, E>(exec: E)
 where
-    E: Executor<'c, Database = sqlx::Postgres>,
+    E: PgExecutor<'c>,
 {
     let state = Arc::new(Mutex::new(State { exec }));
     let mut people = HashMap::new();
@@ -43,8 +43,8 @@ where
 
 pub async fn subscriptions<'c, E>(username: String, email: String, state: Arc<Mutex<State<E>>>)
 where
-    E: Executor<'c, Database = sqlx::Postgres>,
-    for<'a> &'a E: Executor<'a, Database = sqlx::Postgres>
+    E: PgExecutor<'c>,
+    for<'a> &'a E: PgExecutor<'a>
 {
     // let exec = &state.lock().unwrap().exec;
     let _ = sqlx::query!(
