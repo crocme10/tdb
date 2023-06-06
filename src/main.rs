@@ -8,7 +8,15 @@ async fn main() {
     let conn_str = std::env::var("DATABASE_URL").expect("database url");
     let pool = connect_with_conn_str(&conn_str, 4000).await;
     let mut conn = pool.acquire().await.expect("acquire connection");
-    subscriptions("Alice".to_string(), "Bob".to_string(), &mut conn).await;
+    run(&mut conn).await;
+
+    println!("connected");
+}
+
+async fn run<'c, E>(exec: E) where
+    E: Executor<'c, Database = sqlx::Postgres> {
+    let state = State { exec };
+    subscriptions("Alice".to_string(), "Bob".to_string(), state).await;
 
     println!("connected");
 }
@@ -24,7 +32,7 @@ pub async fn connect_with_conn_str(conn_str: &str, timeout: u64) -> PgPool {
 pub async fn subscriptions<'c, E>(
     username: String,
     email: String,
-    exec: E,
+    state: State<E>,
 ) 
     where
     E: Executor<'c, Database = sqlx::Postgres>,
@@ -36,9 +44,11 @@ pub async fn subscriptions<'c, E>(
         username,
         Utc::now()
     )
-    .execute(exec)
+    .execute(state.exec)
     .await
     .expect("insert into subscriptions");
 }
 
-
+pub struct State<E> {
+    pub exec: E,
+}
