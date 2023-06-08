@@ -2,13 +2,13 @@
 > An exploration in sqlx::Executor to enable proper testing with transactions.
 
 sqlx is a good choice for a rust project with a database backend. In order to connect with the
-backend, you can use either a connection, or a pool of connection. When dealing with tests in
+backend, you can use either a connection, or a pool of connections. When dealing with tests in
 your project, you have to make sure that your tests are idempotent, in other words that if you
 run your test once and it passes, then if you run it again it should pass. But if you don't pay
-attention, you can run into issues, like in the following scenario: Imagine a test that insert
-data in the database, and then checks that the data is there. Your test insert the data once,
+attention, you can run into issues, like in the following scenario: Imagine a test that inserts
+data in the database, and then checks that the data is there. Your test inserts the data once,
 the test checks the data is there, all is well. But when you run the test again, the test fails
-because when you try to insert the data again, it fails because of a duplicate key.
+because when you try to insert the data again, this is a case of duplicate key.
 
 There are three main solutions for this problem:
 
@@ -16,6 +16,12 @@ There are three main solutions for this problem:
 2. Drop the database and recreate it after each test.
 3. Wrap each test database side effects in a transaction, and rollback the transaction at the
    end of the test.
+
+This project is about the 3rd option.
+
+We need to make some of the code generic on the database `Executor`, so that in production it
+can be a connection to the database, and during tests it is a transaction, which can be rolled
+back.
 
 This project, and some of its code, is motivated, and inspired by the book
 [Zero to Production in Rust](https://zero2prod.com)
@@ -71,17 +77,8 @@ Distributed under the MIT license. See ``LICENSE`` for more information.
 
 ## Contributing
 
-1. Fork it (<https://github.com/yourname/yourproject/fork>)
+1. Fork it (<https://github.com/crocme10/tdb/fork>)
 2. Create your feature branch (`git checkout -b feature/fooBar`)
 3. Commit your changes (`git commit -am 'Add some fooBar'`)
 4. Push to the branch (`git push origin feature/fooBar`)
 5. Create a new Pull Request
-
-<!-- Markdown link & img dfn's -->
-[npm-image]: https://img.shields.io/npm/v/datadog-metrics.svg?style=flat-square
-[npm-url]: https://npmjs.org/package/datadog-metrics
-[npm-downloads]: https://img.shields.io/npm/dm/datadog-metrics.svg?style=flat-square
-[travis-image]: https://img.shields.io/travis/dbader/node-datadog-metrics/master.svg?style=flat-square
-[travis-url]: https://travis-ci.org/dbader/node-datadog-metrics
-[wiki]: https://github.com/yourname/yourproject/wiki
-
