@@ -11,12 +11,12 @@ async fn main() {
     let conn_str = std::env::var("DATABASE_URL").expect("database url");
     let pool = connect_with_conn_str(&conn_str, 4000).await;
     let conn = pool.acquire().await.expect("acquire connection");
-    run(conn).await;
+    let _ = run(conn).await;
 
     println!("connected");
 }
 
-async fn run<T>(exec: T)
+async fn run<T>(exec: T) -> T
 where
     for<'e> &'e mut T: PgExecutor<'e>,
     T: Send + Sync + 'static,
@@ -40,6 +40,8 @@ where
     }
 
     println!("done");
+
+    Arc::into_inner(state).expect("try unwrap").into_inner().exec
 }
 
 pub async fn subscriptions<T>(username: String, email: String, state: Arc<Mutex<State<T>>>)
@@ -81,7 +83,7 @@ mod tests {
         let conn_str = std::env::var("DATABASE_URL").expect("database url");
         let pool = connect_with_conn_str(&conn_str, 4000).await;
         let tx = pool.begin().await.expect("begin transaction");
-        run(tx).await;
+        let mut tx = run(tx).await;
         let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM subscriptions").fetch_one(&mut tx).await.expect("count");
         assert_eq!(count, 2);
     }
