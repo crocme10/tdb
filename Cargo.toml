@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sqlx = { version = "^0.6.3", default-features= false, features = ["runtime-actix-rustls", "macros", "postgres", "uuid", "chrono"] }
+sqlx = { version = "^0.6.3", default-features= false, features = ["runtime-tokio-native-tls", "macros", "postgres", "uuid", "chrono"] }
 tokio = { version = "^1.28.2", features = ["macros", "rt-multi-thread", "rt", "sync" ] }
 uuid = { version = "^1.3.3", features = ["serde", "v4" ] }
 chrono = { version = "^0.4.26", features = [ "serde" ] }
@@ -14,6 +14,14 @@ chrono = { version = "^0.4.26", features = [ "serde" ] }
 [dev-dependencies]
 cucumber = { git = "https://github.com/cucumber-rs/cucumber.git", branch = "main", features = ["macros"]}
 futures = "^0.3.28"
+
+[lib]
+name = "tdb"
+path = "src/lib.rs"
+
+[[bin]]
+name = "tbd"
+path = "src/main.rs"
 
 [[test]]
 name = "integration"

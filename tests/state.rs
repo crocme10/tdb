@@ -1,7 +1,7 @@
 use cucumber::World;
-use sqlx::{Connection, PgConnection, PgPool, Postgres, Transaction};
+use sqlx::{PgPool, Postgres, Transaction};
 
-use test_generic_axum_state::connect_with_conn_str;
+use tdb::connect_with_conn_str;
 
 #[derive(Debug, World)]
 #[world(init = Self::new)]
@@ -12,17 +12,10 @@ pub struct TestWorld {
 
 impl TestWorld {
     pub async fn new() -> Self {
-
         let conn_str = std::env::var("DATABASE_URL").expect("database url");
 
-        let pool = connect_with_conn_str(&conn_str, 4000)
-            .await
-            .unwrap_or_else(|_| panic!("Establishing a database connection with {conn_str}"));
+        let pool = connect_with_conn_str(&conn_str, 4000).await;
 
-
-        TestWorld {
-            pool,
-            tx: None,
-        }
+        TestWorld { pool, tx: None }
     }
 }

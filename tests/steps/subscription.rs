@@ -1,29 +1,33 @@
 use cucumber::{then, when};
-use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use crate::state;
-use crate::utils::testing_url_for_endpoint;
+
+use tdb::{subscriptions, State};
 
 #[when(regex = r#"the user subscribes with username "(\S*)" and email "(\S*)""#)]
 async fn subscribes_full(world: &mut state::TestWorld, username: String, email: String) {
-    let url = testing_url_for_endpoint("subscriptions");
-    let mut map = HashMap::new();
-    map.insert("username", username);
-    map.insert("email", email);
-    let client = reqwest::Client::new();
-    let resp = client.post(url).json(&map).send().await.expect("response");
-    world.resp = Some(resp);
+    let exec = world.tx.take().expect("take transaction");
+    let state = Arc::new(Mutex::new(State { exec }));
+    let state2 = state.clone();
+    let handle = tokio::spawn(async move { subscriptions(username, email, state).await; });
+    handle.await.expect("thread panicked");
+    let tx = Arc::into_inner(state2).expect("try unwrap").into_inner().exec;
+    world.tx = Some(tx);
 }
 
 #[then(regex = r#"the database stored the username "(\S+)" and the email "(\S+)""#)]
 async fn query_database(world: &mut state::TestWorld, username: String, email: String) {
+    let mut exec = world.tx.take().expect("take transaction");
     let saved = sqlx::query!(
         r#"SELECT email, username FROM subscriptions WHERE username = $1"#,
         username
     )
-    .fetch_one(&mut world.db_connection)
+    .fetch_one(&mut exec)
     .await
     .expect("Failed to fetch saved subscription");
     assert_eq!(saved.email, email);
     assert_eq!(saved.username, username);
+    world.tx = Some(exec);
 }
